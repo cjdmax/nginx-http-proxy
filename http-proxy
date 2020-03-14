@@ -1,0 +1,34 @@
+location ~ "\/(?<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/(?<gohost>[^\/]*)/(?<path>.*)" {
+
+	proxy_pass http://$ip/$path;
+	proxy_set_header Host $gohost;
+	proxy_set_header X-Forwarded-For $remote_addr;
+
+	# straight links for this site	
+	sub_filter 'http://$gohost/' 'http://$baseline/$ip/$gohost/';
+	sub_filter 'https://$gohost/' 'https://$baseline/$ip/$gohost/';
+
+	# hrefs	
+	sub_filter 'href="/' 'href="http://$baseline/$ip/$gohost/';
+	sub_filter 'href="http://' 'href="http://$baseline/$ip/';
+	sub_filter 'href="https://' 'href="https://$baseline/$ip/';
+
+	# srcs	
+	sub_filter 'src="/' 'src="http://$baseline/$ip/$gohost/';
+	sub_filter 'src="http://' 'src="http://$baseline/$ip/';
+	sub_filter 'src="https://' 'src="https://$baseline/$ip/';
+	
+	sub_filter_once off;
+	sub_filter_types *;
+
+	# redirects
+	proxy_redirect http://$gohost http://$baseline/$ip/$gohost;
+	proxy_redirect https://$gohost https://$baseline/$ip/$gohost;
+	
+	# cookies
+	proxy_cookie_domain $gohost $baseline;
+	proxy_cookie_path / /$ip/$gohost/;
+	
+	#proxy_http_version 1.1; # can't do this, breaks sub_filter...
+
+}
