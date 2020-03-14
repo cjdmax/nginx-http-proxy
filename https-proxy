@@ -1,8 +1,16 @@
 location ~ "\/(?<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/(?<gohost>[^\/]*)/(?<path>.*)" {
 
+        # kill cache
+        add_header Last-Modified $date_gmt;
+        add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+        if_modified_since off;
+        expires off;
+        etag off;
+
 	proxy_pass https://$ip/$path;
 	proxy_set_header Host $gohost;
 	proxy_set_header X-Forwarded-For $remote_addr;
+	proxy_set_header Accept-Encoding ""; # disallow compression, otherwise the sub_filters don't work
 	proxy_ssl_name $gohost; # use the to-proxy hostname for SNI as well.
 
 	# straight links for this site
@@ -10,13 +18,16 @@ location ~ "\/(?<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/(?<gohost>[^
 	# forget links back to http, that's stupid
 
 	# hrefs
+        sub_filter 'href="//' 'href="//'; #prevent // from being zapped
 	sub_filter 'href="/' 'href="https://$baseline/$ip/$gohost/';
 	sub_filter 'href="https://' 'href="https://$baseline/$ip/';
+	sub_filter 'href=\'https://' 'href=\'https://$baseline/$ip/';
 	# forget links back to http, that's stupid
 
 	# srcs
 	sub_filter 'src="/' 'src="https://$baseline/$ip/$gohost/';
 	sub_filter 'src="https://' 'src="https://$baseline/$ip/';
+	sub_filter 'src=\'https://' 'src=\'https://$baseline/$ip/';
 	# forget links back to http, that's stupid
 
 	sub_filter_once off;

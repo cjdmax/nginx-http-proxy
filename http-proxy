@@ -1,14 +1,23 @@
 location ~ "\/(?<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/(?<gohost>[^\/]*)/(?<path>.*)" {
 
+        # kill cache
+        add_header Last-Modified $date_gmt;
+        add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+        if_modified_since off;
+        expires off;
+        etag off;
+
 	proxy_pass http://$ip/$path;
 	proxy_set_header Host $gohost;
 	proxy_set_header X-Forwarded-For $remote_addr;
+	proxy_set_header Accept-Encoding ""; # no compression, otherwise sub_filters don't work
 
 	# straight links for this site	
 	sub_filter 'http://$gohost/' 'http://$baseline/$ip/$gohost/';
 	sub_filter 'https://$gohost/' 'https://$baseline/$ip/$gohost/';
 
 	# hrefs	
+	sub_filter 'href="//' 'href="//'; #prevent // from being zapped
 	sub_filter 'href="/' 'href="http://$baseline/$ip/$gohost/';
 	sub_filter 'href="http://' 'href="http://$baseline/$ip/';
 	sub_filter 'href="https://' 'href="https://$baseline/$ip/';
@@ -17,7 +26,7 @@ location ~ "\/(?<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/(?<gohost>[^
 	sub_filter 'src="/' 'src="http://$baseline/$ip/$gohost/';
 	sub_filter 'src="http://' 'src="http://$baseline/$ip/';
 	sub_filter 'src="https://' 'src="https://$baseline/$ip/';
-	
+
 	sub_filter_once off;
 	sub_filter_types *;
 
